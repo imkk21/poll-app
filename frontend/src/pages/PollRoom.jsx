@@ -4,7 +4,15 @@ import { getPoll, closePoll } from "../utils/api";
 import { socket } from "../utils/socket";
 import { v4 as uuidv4 } from "uuid";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Share2, Lock, CheckCircle2, Users, Copy, Plus } from "lucide-react";
+import {
+  ArrowLeft,
+  Share2,
+  Lock,
+  CheckCircle2,
+  Users,
+  Copy,
+  Plus
+} from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
 export default function PollRoom() {
@@ -42,7 +50,6 @@ export default function PollRoom() {
     };
 
     loadPoll();
-
     socket.emit("join_poll", id);
 
     socket.on("poll_update", updated => {
@@ -56,8 +63,8 @@ export default function PollRoom() {
         style: {
           borderRadius: "12px",
           background: "#ef4444",
-          color: "#fff",
-        },
+          color: "#fff"
+        }
       });
     });
 
@@ -67,21 +74,36 @@ export default function PollRoom() {
     };
   }, [id]);
 
+  // ✅ FIX: optimistic vote update
   const handleVote = (optionId) => {
+    if (voted || !poll.isActive) return;
+
     setSelectedOption(optionId);
+    setVoted(true);
+
+    // optimistic UI update
+    setPoll(prev => ({
+      ...prev,
+      options: prev.options.map(o =>
+        o.optionId === optionId
+          ? { ...o, votes: o.votes + 1 }
+          : o
+      )
+    }));
+
     socket.emit("vote", {
       pollId: id,
       optionId,
       voterId
     });
-    
+
     toast.success("Vote recorded!", {
       icon: "✅",
       style: {
         borderRadius: "12px",
         background: "#10b981",
-        color: "#fff",
-      },
+        color: "#fff"
+      }
     });
   };
 
@@ -93,16 +115,16 @@ export default function PollRoom() {
         style: {
           borderRadius: "12px",
           background: "#333",
-          color: "#fff",
-        },
+          color: "#fff"
+        }
       });
     } catch {
       toast.error("Failed to close poll", {
         style: {
           borderRadius: "12px",
           background: "#ef4444",
-          color: "#fff",
-        },
+          color: "#fff"
+        }
       });
     }
   };
@@ -115,8 +137,8 @@ export default function PollRoom() {
       style: {
         borderRadius: "12px",
         background: "#10b981",
-        color: "#fff",
-      },
+        color: "#fff"
+      }
     });
   };
 
@@ -136,7 +158,9 @@ export default function PollRoom() {
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center px-6">
         <div className="text-center">
           <div className="text-6xl mb-4">😞</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Poll Not Found</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            Poll Not Found
+          </h2>
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={() => navigate("/")}
@@ -154,13 +178,6 @@ export default function PollRoom() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       <Toaster position="top-center" />
-      
-      {/* Animated background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-        <div className="absolute top-40 right-10 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-1/2 w-72 h-72 bg-indigo-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
-      </div>
 
       <div className="relative max-w-3xl mx-auto px-6 py-12">
         <motion.button
@@ -181,7 +198,9 @@ export default function PollRoom() {
           {!poll.isActive && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
               <Lock className="w-5 h-5 text-red-600" />
-              <span className="text-red-700 font-semibold">This poll is closed</span>
+              <span className="text-red-700 font-semibold">
+                This poll is closed
+              </span>
             </div>
           )}
 
@@ -192,7 +211,9 @@ export default function PollRoom() {
           <div className="flex items-center gap-4 text-sm text-gray-600 mb-8">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4" />
-              <span>{totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}</span>
+              <span>
+                {totalVotes} {totalVotes === 1 ? "vote" : "votes"}
+              </span>
             </div>
             {voted && (
               <div className="flex items-center gap-2 text-green-600">
@@ -208,7 +229,7 @@ export default function PollRoom() {
                 const percent = totalVotes
                   ? Math.round((option.votes / totalVotes) * 100)
                   : 0;
-                
+
                 const isSelected = selectedOption === option.optionId;
                 const canVote = !voted && poll.isActive;
 
@@ -229,7 +250,6 @@ export default function PollRoom() {
                           : "cursor-not-allowed border-gray-200 bg-white/50"
                       } ${isSelected ? "border-purple-500 shadow-md" : ""}`}
                     >
-                      {/* Progress bar */}
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${percent}%` }}
@@ -243,7 +263,8 @@ export default function PollRoom() {
                         </span>
                         <div className="flex items-center gap-3">
                           <span className="text-sm text-gray-600">
-                            {option.votes} {option.votes === 1 ? 'vote' : 'votes'}
+                            {option.votes}{" "}
+                            {option.votes === 1 ? "vote" : "votes"}
                           </span>
                           <span className="text-lg font-bold text-purple-600">
                             {percent}%
@@ -258,7 +279,6 @@ export default function PollRoom() {
           </div>
         </motion.div>
 
-        {/* Share Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -269,7 +289,7 @@ export default function PollRoom() {
             <Share2 className="w-5 h-5 text-purple-600" />
             <h3 className="font-bold text-gray-800">Share this poll</h3>
           </div>
-          
+
           <div className="flex gap-2">
             <input
               value={`${window.location.origin}/poll/${id}`}
@@ -287,7 +307,6 @@ export default function PollRoom() {
           </div>
         </motion.div>
 
-        {/* Actions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -303,7 +322,7 @@ export default function PollRoom() {
               Close Poll
             </button>
           )}
-          
+
           <button
             onClick={() => navigate("/create")}
             className="flex-1 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
@@ -313,27 +332,6 @@ export default function PollRoom() {
           </button>
         </motion.div>
       </div>
-
-      <style jsx>{`
-        @keyframes blob {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          25% { transform: translate(20px, -50px) scale(1.1); }
-          50% { transform: translate(-20px, 20px) scale(0.9); }
-          75% { transform: translate(50px, 50px) scale(1.05); }
-        }
-
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-      `}</style>
     </div>
   );
 }
