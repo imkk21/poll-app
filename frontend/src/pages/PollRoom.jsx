@@ -21,10 +21,10 @@ export default function PollRoom() {
 
   const [poll, setPoll] = useState(null);
   const [voted, setVoted] = useState(false);
-  const [isVoting, setIsVoting] = useState(false); // ✅ NEW
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState(null);
+  const [voting, setVoting] = useState(false); // ✅ NEW: Prevents multiple clicks
 
   let voterId = localStorage.getItem("voterId");
   if (!voterId) {
@@ -54,26 +54,15 @@ export default function PollRoom() {
     socket.emit("join_poll", id);
 
     socket.on("poll_update", updated => {
-      setPoll(updated);               // 🔑 server truth
+      setPoll(updated); // 🔑 server is source of truth
       if (updated.voters.includes(voterId)) {
-        setVoted(true);
-        setIsVoting(false);           // ✅ unlock after confirm
+        setVoted(true); // lock ONLY after server confirms
+        setVoting(false); // ✅ FIXED: Release voting lock after server confirmation
       }
     });
 
     socket.on("vote_error", msg => {
-      setIsVoting(false);             // ✅ unlock on error
-
-      // rollback optimistic UI
-      setPoll(prev => ({
-        ...prev,
-        options: prev.options.map(o =>
-          o.optionId === selectedOption
-            ? { ...o, votes: Math.max(o.votes - 1, 0) }
-            : o
-        )
-      }));
-
+      setVoting(false); // ✅ FIXED: Release lock on error
       toast.error(msg, {
         icon: "⚠️",
         style: {
@@ -88,15 +77,16 @@ export default function PollRoom() {
       socket.off("poll_update");
       socket.off("vote_error");
     };
-  }, [id, selectedOption]);
+  }, [id]);
 
-  // ✅ SAFE optimistic vote
+  // ✅ FIXED: Now prevents multiple votes with voting state
   const handleVote = (optionId) => {
-    if (voted || isVoting || !poll.isActive) return;
+    if (voted || !poll.isActive || voting) return; // ✅ Added voting check
 
-    setIsVoting(true);
+    setVoting(true); // ✅ Lock immediately on first click
     setSelectedOption(optionId);
 
+    // optimistic UI update (temporary)
     setPoll(prev => ({
       ...prev,
       options: prev.options.map(o =>
@@ -121,8 +111,6 @@ export default function PollRoom() {
       }
     });
   };
-
-  /* 🔽 EVERYTHING BELOW THIS LINE IS YOUR ORIGINAL JSX 🔽 */
 
   const handleClosePoll = async () => {
     try {
@@ -248,7 +236,7 @@ export default function PollRoom() {
                   : 0;
 
                 const isSelected = selectedOption === option.optionId;
-                const canVote = !voted && poll.isActive;
+                const canVote = !voted && poll.isActive && !voting; // ✅ FIXED: Added voting check
 
                 return (
                   <motion.div
