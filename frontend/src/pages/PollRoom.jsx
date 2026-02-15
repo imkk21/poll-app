@@ -53,8 +53,10 @@ export default function PollRoom() {
     socket.emit("join_poll", id);
 
     socket.on("poll_update", updated => {
-      setPoll(updated);
-      if (updated.voters.includes(voterId)) setVoted(true);
+      setPoll(updated); // 🔑 server is source of truth
+      if (updated.voters.includes(voterId)) {
+        setVoted(true); // lock ONLY after server confirms
+      }
     });
 
     socket.on("vote_error", msg => {
@@ -74,14 +76,13 @@ export default function PollRoom() {
     };
   }, [id]);
 
-  // ✅ FIX: optimistic vote update
+  // ✅ FIXED: optimistic UI without breaking sync
   const handleVote = (optionId) => {
     if (voted || !poll.isActive) return;
 
     setSelectedOption(optionId);
-    setVoted(true);
 
-    // optimistic UI update
+    // optimistic UI update (temporary)
     setPoll(prev => ({
       ...prev,
       options: prev.options.map(o =>
