@@ -1,4 +1,4 @@
-const API = "http://localhost:5000/api";
+const API = "https://poll-backend-bxqr.onrender.com/api";
 
 export const createPoll = async (data) => {
   const res = await fetch(`${API}/polls`, {
