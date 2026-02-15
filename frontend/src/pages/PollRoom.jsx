@@ -24,7 +24,7 @@ export default function PollRoom() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState(null);
-  const [voting, setVoting] = useState(false); // ✅ NEW: Prevents multiple clicks
+  const [voting, setVoting] = useState(false); 
 
   let voterId = localStorage.getItem("voterId");
   if (!voterId) {
@@ -54,15 +54,15 @@ export default function PollRoom() {
     socket.emit("join_poll", id);
 
     socket.on("poll_update", updated => {
-      setPoll(updated); // 🔑 server is source of truth
+      setPoll(updated); 
       if (updated.voters.includes(voterId)) {
-        setVoted(true); // lock ONLY after server confirms
-        setVoting(false); // ✅ FIXED: Release voting lock after server confirmation
+        setVoted(true);
+        setVoting(false); 
       }
     });
 
     socket.on("vote_error", msg => {
-      setVoting(false); // ✅ FIXED: Release lock on error
+      setVoting(false); 
       toast.error(msg, {
         icon: "⚠️",
         style: {
@@ -79,14 +79,13 @@ export default function PollRoom() {
     };
   }, [id]);
 
-  // ✅ FIXED: Now prevents multiple votes with voting state
-  const handleVote = (optionId) => {
-    if (voted || !poll.isActive || voting) return; // ✅ Added voting check
 
-    setVoting(true); // ✅ Lock immediately on first click
+  const handleVote = (optionId) => {
+    if (voted || !poll.isActive || voting) return;
+
+    setVoting(true); 
     setSelectedOption(optionId);
 
-    // optimistic UI update (temporary)
     setPoll(prev => ({
       ...prev,
       options: prev.options.map(o =>
@@ -236,7 +235,7 @@ export default function PollRoom() {
                   : 0;
 
                 const isSelected = selectedOption === option.optionId;
-                const canVote = !voted && poll.isActive && !voting; // ✅ FIXED: Added voting check
+                const canVote = !voted && poll.isActive && !voting; 
 
                 return (
                   <motion.div

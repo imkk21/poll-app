@@ -4,7 +4,7 @@ import Poll from "../models/Poll.js";
 
 const router = express.Router();
 
-// Create poll
+
 router.post("/", async (req, res) => {
   const { question, options } = req.body;
 
@@ -34,7 +34,7 @@ router.get("/:id", async (req, res) => {
   res.json(poll);
 });
 
-// ✅ Close poll + emit socket update
+
 router.post("/:id/close", async (req, res) => {
   const poll = await Poll.findById(req.params.id);
   if (!poll) return res.status(404).json({ message: "Poll not found" });
@@ -42,7 +42,7 @@ router.post("/:id/close", async (req, res) => {
   poll.isActive = false;
   await poll.save();
 
-  // 🔔 notify all connected clients instantly
+ 
   const io = req.app.get("io");
   io.to(poll._id.toString()).emit("poll_update", poll);
 
