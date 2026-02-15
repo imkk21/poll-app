@@ -21,6 +21,7 @@ export default function PollRoom() {
 
   const [poll, setPoll] = useState(null);
   const [voted, setVoted] = useState(false);
+  const [isVoting, setIsVoting] = useState(false); // ✅ NEW
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState(null);
@@ -53,13 +54,26 @@ export default function PollRoom() {
     socket.emit("join_poll", id);
 
     socket.on("poll_update", updated => {
-      setPoll(updated); // 🔑 server is source of truth
+      setPoll(updated);               // 🔑 server truth
       if (updated.voters.includes(voterId)) {
-        setVoted(true); // lock ONLY after server confirms
+        setVoted(true);
+        setIsVoting(false);           // ✅ unlock after confirm
       }
     });
 
     socket.on("vote_error", msg => {
+      setIsVoting(false);             // ✅ unlock on error
+
+      // rollback optimistic UI
+      setPoll(prev => ({
+        ...prev,
+        options: prev.options.map(o =>
+          o.optionId === selectedOption
+            ? { ...o, votes: Math.max(o.votes - 1, 0) }
+            : o
+        )
+      }));
+
       toast.error(msg, {
         icon: "⚠️",
         style: {
@@ -74,15 +88,15 @@ export default function PollRoom() {
       socket.off("poll_update");
       socket.off("vote_error");
     };
-  }, [id]);
+  }, [id, selectedOption]);
 
-  // ✅ FIXED: optimistic UI without breaking sync
+  // ✅ SAFE optimistic vote
   const handleVote = (optionId) => {
-    if (voted || !poll.isActive) return;
+    if (voted || isVoting || !poll.isActive) return;
 
+    setIsVoting(true);
     setSelectedOption(optionId);
 
-    // optimistic UI update (temporary)
     setPoll(prev => ({
       ...prev,
       options: prev.options.map(o =>
@@ -107,6 +121,8 @@ export default function PollRoom() {
       }
     });
   };
+
+  /* 🔽 EVERYTHING BELOW THIS LINE IS YOUR ORIGINAL JSX 🔽 */
 
   const handleClosePoll = async () => {
     try {
